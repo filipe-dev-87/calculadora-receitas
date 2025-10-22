@@ -1,33 +1,30 @@
 # ---------------------------------------------
-# 🧮 Calculadora de Preço de Receitas
-# Interface gráfica com Streamlit
-# Autor: Filipe Fonseca (com ChatGPT)
+# 🧮 Calculadora de Preço de Receitas com Gráficos
+# Streamlit + Plotly
 # ---------------------------------------------
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 st.set_page_config(page_title="Calculadora de Receitas", page_icon="🍰", layout="centered")
 
 st.title("🍰 Calculadora de Preço de Receitas")
-st.write("Calcule facilmente o custo total, custo por porção e preço de venda com margem de lucro.")
+st.write("Calcule o custo total, custo por porção e visualize a composição de custos por ingrediente.")
 
-# -----------------------------------------------------
+# -------------------------------
 # Entrada de dados gerais
-# -----------------------------------------------------
+# -------------------------------
 num_porcoes = st.number_input("Número de porções / fatias produzidas", min_value=1, value=6)
 margem_lucro = st.number_input("Margem de lucro (%)", min_value=0.0, value=30.0, step=1.0)
 
 st.markdown("---")
 
-# -----------------------------------------------------
+# -------------------------------
 # Tabela de ingredientes dinâmica
-# -----------------------------------------------------
+# -------------------------------
 st.subheader("🧾 Ingredientes da Receita")
 
-st.write("Adicione os ingredientes com preço do pacote, quantidade total e quantidade usada na receita.")
-
-# Exemplo inicial
 ingredientes_exemplo = pd.DataFrame([
     {"Ingrediente": "Ovo", "Preço Pacote (R$)": 7.00, "Qtd. Pacote": 12, "Qtd. Usada": 1},
     {"Ingrediente": "Leite", "Preço Pacote (R$)": 3.50, "Qtd. Pacote": 1000, "Qtd. Usada": 190},
@@ -41,16 +38,15 @@ ingredientes_exemplo = pd.DataFrame([
     {"Ingrediente": "Embalagem", "Preço Pacote (R$)": 6.80, "Qtd. Pacote": 3, "Qtd. Usada": 1}
 ])
 
-# Editable DataFrame
 ingredientes = st.data_editor(
     ingredientes_exemplo,
     num_rows="dynamic",
     use_container_width=True,
 )
 
-# -----------------------------------------------------
+# -------------------------------
 # Cálculo dos custos
-# -----------------------------------------------------
+# -------------------------------
 if not ingredientes.empty:
     ingredientes["Custo (R$)"] = ingredientes["Preço Pacote (R$)"] * (ingredientes["Qtd. Usada"] / ingredientes["Qtd. Pacote"])
     custo_total = ingredientes["Custo (R$)"].sum()
@@ -67,8 +63,38 @@ if not ingredientes.empty:
     st.subheader("📊 Detalhamento dos custos por ingrediente")
     st.dataframe(ingredientes[["Ingrediente", "Custo (R$)"]], use_container_width=True)
 
-    # Download em CSV
+    # -------------------------------
+    # Gráfico de pizza
+    # -------------------------------
+    fig_pizza = px.pie(
+        ingredientes,
+        names="Ingrediente",
+        values="Custo (R$)",
+        title="Composição de custo por ingrediente",
+        hover_data=["Custo (R$)"],
+        labels={"Custo (R$)":"Custo (R$)"},
+    )
+    st.plotly_chart(fig_pizza, use_container_width=True)
+
+    # -------------------------------
+    # Gráfico de barras
+    # -------------------------------
+    fig_bar = px.bar(
+        ingredientes,
+        x="Ingrediente",
+        y="Custo (R$)",
+        title="Custo de cada ingrediente",
+        text="Custo (R$)",
+        labels={"Custo (R$)":"Custo (R$)", "Ingrediente":"Ingrediente"}
+    )
+    fig_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+    # -------------------------------
+    # Download CSV
+    # -------------------------------
     csv = ingredientes.to_csv(index=False).encode("utf-8")
     st.download_button("📥 Baixar planilha (CSV)", data=csv, file_name="custo_receita.csv", mime="text/csv")
+
 else:
     st.warning("Adicione pelo menos um ingrediente para calcular o custo.")
